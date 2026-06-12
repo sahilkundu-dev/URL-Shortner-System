@@ -229,8 +229,8 @@ url-shortener/
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/sahilkundu-dev/url-shortener.git
-cd url-shortener
+git clone https://github.com/sahilkundu-dev/URL-Shortner-System.git
+cd URL-Shortner-System
 ```
 
 **2. Start infrastructure (MySQL + Redis)**
