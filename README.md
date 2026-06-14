@@ -22,9 +22,9 @@
 <br/>
 
 ```
-https://www.example.com/blog/how-to-build-a-scalable-url-shortener-using-java-spring-boot-and-redis
+https://medium.com/@j2eeexpert2015/maven-for-java-developers-a-step-by-step-guide-to-setting-up-and-building-projects-59152d09f00c
                                           ↓
-                            http://localhost:8080/000001
+                            http://localhost:8080/000004
 ```
 
 </div>
