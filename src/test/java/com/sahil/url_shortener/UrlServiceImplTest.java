@@ -1,7 +1,9 @@
 package com.sahil.url_shortener;
 
+import com.sahil.url_shortener.entity.ClickEntity;
 import com.sahil.url_shortener.entity.UrlEntity;
 import com.sahil.url_shortener.exception.UrlNotFoundException;
+import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
 import com.sahil.url_shortener.service.UrlServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,9 @@ class UrlServiceImplTest {
     private UrlRepository urlRepository;
 
     @Mock
+    private ClickRepository clickRepository;
+
+    @Mock
     private RedisTemplate<String, String> redisTemplate;
 
     @Mock
@@ -42,6 +47,8 @@ class UrlServiceImplTest {
     private static final String BASE_URL = "http://localhost:8080";
     private static final String LONG_URL = "https://www.example.com/some/very/long/url";
     private static final String SHORT_CODE = "000001";
+    private static final String IP = "127.0.0.1";
+    private static final String USER_AGENT = "test-agent";
 
     @BeforeEach
     void setUp() {
@@ -103,15 +110,20 @@ class UrlServiceImplTest {
     void getLongUrl_cacheHit_returnsFromRedis() {
 
         // ARRANGE
+        UrlEntity entity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode(SHORT_CODE).build();
+
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(SHORT_CODE)).thenReturn(LONG_URL);
+        when(urlRepository.findByShortCode(SHORT_CODE)).thenReturn(Optional.of(entity));
+        when(clickRepository.save(any(ClickEntity.class))).thenReturn(null);
 
         // ACT
-        String result = urlService.getLongUrl(SHORT_CODE);
+        String result = urlService.getLongUrl(SHORT_CODE, IP, USER_AGENT);
 
         // ASSERT
         assertThat(result).isEqualTo(LONG_URL);
-        verify(urlRepository, never()).findByShortCode(any());
+        verify(valueOperations, never()).set(any(), any(), anyLong(), any());
     }
 
     // ─── TEST 4 ───────────────────────────────────────────────────────────────
@@ -121,22 +133,19 @@ class UrlServiceImplTest {
     void getLongUrl_cacheMiss_fetchesFromDbAndCaches() {
 
         // ARRANGE
+        UrlEntity entity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode(SHORT_CODE).build();
+
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.get(SHORT_CODE)).thenReturn(null);
-
-        UrlEntity entity = UrlEntity.builder()
-                .id(1L)
-                .longUrl(LONG_URL)
-                .shortCode(SHORT_CODE)
-                .build();
         when(urlRepository.findByShortCode(SHORT_CODE)).thenReturn(Optional.of(entity));
+        when(clickRepository.save(any(ClickEntity.class))).thenReturn(null);
 
         // ACT
-        String result = urlService.getLongUrl(SHORT_CODE);
+        String result = urlService.getLongUrl(SHORT_CODE, IP, USER_AGENT);
 
         // ASSERT
         assertThat(result).isEqualTo(LONG_URL);
-        verify(urlRepository).findByShortCode(SHORT_CODE);
         verify(valueOperations).set(eq(SHORT_CODE), eq(LONG_URL), eq(24L), eq(TimeUnit.HOURS));
     }
 
@@ -152,7 +161,7 @@ class UrlServiceImplTest {
         when(urlRepository.findByShortCode(SHORT_CODE)).thenReturn(Optional.empty());
 
         // ACT + ASSERT
-        assertThatThrownBy(() -> urlService.getLongUrl(SHORT_CODE))
+        assertThatThrownBy(() -> urlService.getLongUrl(SHORT_CODE, IP, USER_AGENT))
                 .isInstanceOf(UrlNotFoundException.class)
                 .hasMessageContaining(SHORT_CODE);
     }
@@ -168,10 +177,7 @@ class UrlServiceImplTest {
         when(urlRepository.findByLongUrl(LONG_URL)).thenReturn(Optional.empty());
 
         UrlEntity savedEntity = UrlEntity.builder()
-                .id(1L)
-                .longUrl(LONG_URL)
-                .shortCode(SHORT_CODE)
-                .build();
+                .id(1L).longUrl(LONG_URL).shortCode(SHORT_CODE).build();
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT
@@ -179,5 +185,26 @@ class UrlServiceImplTest {
 
         // ASSERT
         verify(valueOperations).set(any(), any(), eq(24L), eq(TimeUnit.HOURS));
+    }
+
+    // ─── TEST 7 — NEW ─────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("getLongUrl: click is recorded on every redirect")
+    void getLongUrl_recordsClickOnEveryRedirect() {
+
+        // ARRANGE
+        UrlEntity entity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode(SHORT_CODE).build();
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(SHORT_CODE)).thenReturn(LONG_URL);
+        when(urlRepository.findByShortCode(SHORT_CODE)).thenReturn(Optional.of(entity));
+
+        // ACT
+        urlService.getLongUrl(SHORT_CODE, IP, USER_AGENT);
+
+        // ASSERT
+        verify(clickRepository).save(any(ClickEntity.class));
     }
 }

@@ -1,7 +1,9 @@
 package com.sahil.url_shortener.service;
 
+import com.sahil.url_shortener.entity.ClickEntity;
 import com.sahil.url_shortener.entity.UrlEntity;
 import com.sahil.url_shortener.exception.UrlNotFoundException;
+import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
 import com.sahil.url_shortener.util.Base62Util;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class UrlServiceImpl implements UrlService {
 
     private final UrlRepository urlRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ClickRepository clickRepository;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -53,20 +56,25 @@ public class UrlServiceImpl implements UrlService {
     }
 
     @Override
-    public String getLongUrl(String shortCode) {
+    public String getLongUrl(String shortCode, String ipAddress, String userAgent) {
 
         // Step 1: Check Redis cache first (fast path)
         String cachedUrl = redisTemplate.opsForValue().get(shortCode);
-        if (cachedUrl != null) {
-            return cachedUrl;
-        }
 
-        // Step 2: Cache miss - go to MySQL (slow path)
+        // Step 2: Find the entity for click recording (always needed now)
         UrlEntity entity = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
-        // Step 3: Repopulate cache for next time
-        redisTemplate.opsForValue().set(shortCode, entity.getLongUrl(), CACHE_TTL_HOURS, TimeUnit.HOURS);
+        // Step 3: If cache miss — repopulate Redis
+        if (cachedUrl == null) {
+            redisTemplate.opsForValue().set(
+                    shortCode, entity.getLongUrl(), CACHE_TTL_HOURS, TimeUnit.HOURS
+            );
+        }
+
+        // Step 4: Record the click
+        ClickEntity click = ClickEntity.builder().urlEntity(entity).ipAddress(ipAddress).userAgent(userAgent).build();
+        clickRepository.save(click);
 
         return entity.getLongUrl();
     }
