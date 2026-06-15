@@ -1,5 +1,6 @@
 package com.sahil.url_shortener;
 
+import com.sahil.url_shortener.exception.UrlValidationException;
 import com.sahil.url_shortener.entity.ClickEntity;
 import com.sahil.url_shortener.entity.UrlEntity;
 import com.sahil.url_shortener.exception.UrlNotFoundException;
@@ -206,5 +207,49 @@ class UrlServiceImplTest {
 
         // ASSERT
         verify(clickRepository).save(any(ClickEntity.class));
+    }
+
+    // ─── TEST 8 ───────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: null URL throws UrlValidationException")
+    void shortenUrl_nullUrl_throwsValidationException() {
+
+        assertThatThrownBy(() -> urlService.shortenUrl(null))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("empty");
+    }
+
+// ─── TEST 9 ───────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: blank URL throws UrlValidationException")
+    void shortenUrl_blankUrl_throwsValidationException() {
+
+        assertThatThrownBy(() -> urlService.shortenUrl("   "))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("empty");
+    }
+
+// ─── TEST 10 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: javascript scheme throws UrlValidationException")
+    void shortenUrl_javascriptUrl_throwsValidationException() {
+
+        assertThatThrownBy(() -> urlService.shortenUrl("javascript:alert(1)"))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("scheme not allowed");
+    }
+
+// ─── TEST 11 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: malformed URL throws UrlValidationException")
+    void shortenUrl_malformedUrl_throwsValidationException() {
+
+        assertThatThrownBy(() -> urlService.shortenUrl("not-a-url"))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("Invalid URL format");
     }
 }

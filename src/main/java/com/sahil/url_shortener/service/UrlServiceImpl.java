@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import com.sahil.url_shortener.util.UrlValidatorUtil;
 
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +29,9 @@ public class UrlServiceImpl implements UrlService {
 
     @Override
     public String shortenUrl(String longUrl) {
+
+        // Validate before doing anything else
+        UrlValidatorUtil.validate(longUrl);
 
         // Step 1: Check if this longUrl was already shortened (avoid duplicates)
         var existing = urlRepository.findByLongUrl(longUrl);

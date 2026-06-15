@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.sahil.url_shortener.exception.UrlValidationException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -16,6 +17,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "error", ex.getMessage(),
                 "status", 404,
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(UrlValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleUrlValidation(UrlValidationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", ex.getMessage(),
+                "status", 400,
                 "timestamp", LocalDateTime.now().toString()
         ));
     }
