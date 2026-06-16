@@ -647,7 +647,7 @@ All tests use Mockito mocks. No database, Redis instance, or Docker required. Av
 | 13 | `getLongUrl_expiredUrl_throwsExceptionAndEvictsRedis` | `UrlExpiredException` → with "URL Not Expired"
 
 ```
-✅ 11 tests passed — 11 tests total
+✅ 13 tests passed — 13 tests total
 Process finished with exit code 0
 ```
 
