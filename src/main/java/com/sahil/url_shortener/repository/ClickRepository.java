@@ -13,4 +13,6 @@ public interface ClickRepository extends JpaRepository<ClickEntity, Long> {
     long countByUrlEntity(UrlEntity urlEntity);
 
     List<ClickEntity> findTop10ByUrlEntityOrderByClickedAtDesc(UrlEntity urlEntity);
+
+    void deleteByUrlEntity(UrlEntity urlEntity);
 }

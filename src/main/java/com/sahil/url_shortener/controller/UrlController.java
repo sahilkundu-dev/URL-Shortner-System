@@ -18,7 +18,7 @@ public class UrlController {
 
     @PostMapping("/api/shorten")
     public ResponseEntity<ShortenResponse> shorten(@RequestBody ShortenRequest request) {
-        String shortUrl = urlService.shortenUrl(request.getLongUrl());
+        String shortUrl = urlService.shortenUrl(request.getLongUrl(), request.getTtlHours());
         return ResponseEntity.ok(new ShortenResponse(shortUrl, request.getLongUrl()));
     }
 

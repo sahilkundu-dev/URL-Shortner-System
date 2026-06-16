@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.sahil.url_shortener.exception.UrlValidationException;
+import com.sahil.url_shortener.exception.UrlExpiredException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -17,6 +18,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "error", ex.getMessage(),
                 "status", 404,
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(UrlExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleUrlExpired(UrlExpiredException ex) {
+        return ResponseEntity.status(HttpStatus.GONE).body(Map.of(
+                "error", ex.getMessage(),
+                "status", 410,
                 "timestamp", LocalDateTime.now().toString()
         ));
     }

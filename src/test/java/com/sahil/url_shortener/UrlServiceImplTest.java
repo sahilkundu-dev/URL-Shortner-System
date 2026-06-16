@@ -17,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
+import com.sahil.url_shortener.exception.UrlExpiredException;
+import java.time.LocalDateTime;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -74,7 +76,7 @@ class UrlServiceImplTest {
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT
-        String result = urlService.shortenUrl(LONG_URL);
+        String result = urlService.shortenUrl(LONG_URL, null);
 
         // ASSERT
         assertThat(result).isEqualTo(BASE_URL + "/" + SHORT_CODE);
@@ -97,7 +99,7 @@ class UrlServiceImplTest {
         when(urlRepository.findByLongUrl(LONG_URL)).thenReturn(Optional.of(existingEntity));
 
         // ACT
-        String result = urlService.shortenUrl(LONG_URL);
+        String result = urlService.shortenUrl(LONG_URL, null);
 
         // ASSERT
         assertThat(result).isEqualTo(BASE_URL + "/" + SHORT_CODE);
@@ -182,7 +184,7 @@ class UrlServiceImplTest {
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT
-        urlService.shortenUrl(LONG_URL);
+        urlService.shortenUrl(LONG_URL, null);
 
         // ASSERT
         verify(valueOperations).set(any(), any(), eq(24L), eq(TimeUnit.HOURS));
@@ -215,7 +217,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: null URL throws UrlValidationException")
     void shortenUrl_nullUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl(null))
+        assertThatThrownBy(() -> urlService.shortenUrl(null, null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("empty");
     }
@@ -226,7 +228,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: blank URL throws UrlValidationException")
     void shortenUrl_blankUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("   "))
+        assertThatThrownBy(() -> urlService.shortenUrl("   ", null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("empty");
     }
@@ -237,7 +239,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: javascript scheme throws UrlValidationException")
     void shortenUrl_javascriptUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("javascript:alert(1)"))
+        assertThatThrownBy(() -> urlService.shortenUrl("javascript:alert(1)", null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("scheme not allowed");
     }
@@ -248,8 +250,59 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: malformed URL throws UrlValidationException")
     void shortenUrl_malformedUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("not-a-url"))
+        assertThatThrownBy(() -> urlService.shortenUrl("not-a-url", null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("Invalid URL format");
+    }
+
+    // ─── TEST 12 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: with TTL sets Redis expiry to ttlHours not default")
+    void shortenUrl_withTtl_setsRedisExpiryToTtlHours() {
+
+        // ARRANGE
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(urlRepository.findByLongUrl(LONG_URL)).thenReturn(Optional.empty());
+
+        UrlEntity savedEntity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode(SHORT_CODE).build();
+        when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
+
+        // ACT — shorten with 6-hour TTL
+        urlService.shortenUrl(LONG_URL, 6);
+
+        // ASSERT — Redis TTL should be 6 hours, not 24
+        verify(valueOperations).set(any(), any(), eq(6L), eq(TimeUnit.HOURS));
+    }
+
+// ─── TEST 13 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("getLongUrl: expired URL throws UrlExpiredException and evicts Redis")
+    void getLongUrl_expiredUrl_throwsExceptionAndEvictsRedis() {
+
+        // ARRANGE
+        UrlEntity expiredEntity = UrlEntity.builder()
+                .id(1L)
+                .longUrl(LONG_URL)
+                .shortCode(SHORT_CODE)
+                .expiresAt(LocalDateTime.now().minusHours(1)) // expired 1 hour ago
+                .build();
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(SHORT_CODE)).thenReturn(null);
+        when(urlRepository.findByShortCode(SHORT_CODE))
+                .thenReturn(Optional.of(expiredEntity));
+
+        // ACT + ASSERT
+        assertThatThrownBy(() -> urlService.getLongUrl(SHORT_CODE, IP, USER_AGENT))
+                .isInstanceOf(UrlExpiredException.class)
+                .hasMessageContaining(SHORT_CODE);
+
+        // Redis should be evicted
+        verify(redisTemplate).delete(SHORT_CODE);
+        // Click should NOT be recorded for expired URL
+        verify(clickRepository, never()).save(any());
     }
 }

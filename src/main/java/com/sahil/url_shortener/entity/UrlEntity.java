@@ -28,6 +28,9 @@ public class UrlEntity {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+    
+    @Column(nullable = true)
+    private LocalDateTime expiresAt; // null = never expires
 
     @PrePersist
     public void prePersist() {
