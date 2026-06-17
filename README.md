@@ -587,15 +587,6 @@ curl http://localhost:8080/zzzzz
 }
 ```
 
-**`410 Gone`** — Resource existed but has been permanently removed
-```json
-{
-  "error": "Short URL has expired: 000006",
-  "status": 410,
-  "timestamp": "2026-06-14T20:00:00.000000"
-}
-```
-
 ---
 
 ## 🛡️ Input Validation
@@ -643,11 +634,9 @@ All tests use Mockito mocks. No database, Redis instance, or Docker required. Av
 | 9 | `shortenUrl_blankUrl_throwsValidationException` | `"   "` input → `UrlValidationException` with "empty" in message |
 | 10 | `shortenUrl_javascriptUrl_throwsValidationException` | XSS attempt → `UrlValidationException` with "scheme not allowed" |
 | 11 | `shortenUrl_malformedUrl_throwsValidationException` | `"not-a-url"` → `UrlValidationException` with "Invalid URL format" |
-| 12 | `shortenUrl_withTtl_setsRedisExpiryToTtlHours` | `` → `UrlExpiredException` with "URL Expiry" | 
-| 13 | `getLongUrl_expiredUrl_throwsExceptionAndEvictsRedis` | `UrlExpiredException` → with "URL Not Expired"
 
 ```
-✅ 13 tests passed — 13 tests total
+✅ 11 tests passed — 11 tests total
 Process finished with exit code 0
 ```
 
@@ -821,12 +810,12 @@ Building this project from scratch — no tutorials, no scaffold code — taught
 - [x] Click analytics — per-redirect tracking with timestamp, IP, user-agent
 - [x] Analytics endpoints — total count + recent 10 clicks
 - [x] URL validation — RFC 3986, scheme blocklist, XSS prevention, null/blank/length checks
-- [x] URL expiry** — per-link TTL set at creation time, `@Scheduled` cleanup of expired rows, HTTP 410 Gone for expired codes
 - [x] Global error handling — clean JSON for 400, 404, 500
 - [x] 11 JUnit 5 + Mockito unit tests
 - [x] Docker Compose infrastructure
 
 ### In Progress / Planned
+- [ ] **URL expiry** — per-link TTL set at creation time, `@Scheduled` cleanup of expired rows, HTTP 410 Gone for expired codes
 - [ ] **Custom alias** — optional user-defined short code (e.g. `/my-link`), conflict detection, reserved word blocklist
 - [ ] **Rate limiting** — per-IP request throttling on `POST /api/shorten`, Bucket4j or Redis counter, HTTP 429 Too Many Requests
 - [ ] **Swagger / OpenAPI** — `springdoc-openapi`, interactive try-it-out UI at `/swagger-ui.html`
