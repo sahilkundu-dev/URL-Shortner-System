@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.sahil.url_shortener.exception.UrlValidationException;
 import com.sahil.url_shortener.exception.UrlExpiredException;
+import com.sahil.url_shortener.exception.RateLimitException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -45,6 +46,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "error", "Something went wrong",
                 "status", 500,
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimit(RateLimitException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "60").body(Map.of(
+                "error", ex.getMessage(),
+                "status", 429,
                 "timestamp", LocalDateTime.now().toString()
         ));
     }
