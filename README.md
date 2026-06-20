@@ -614,7 +614,7 @@ curl http://localhost:8080/api/analytics/000001/count
 | `404`  | Unknown short code     | `{"error":"No URL found for short code: zzzzz","status":404,"timestamp":"..."}` |
 | `410`  | Expired short URL      | `{"error":"Short URL has expired: 000001","status":410,"timestamp":"..."}`      |
 | `500`  | Unhandled server error | `{"error":"Something went wrong","status":500,"timestamp":"..."}`               |
-| `429`  | Rate Limit exceeded    | `{"erroe":"Too many requests from IP:...","status":429,"timestamp":"..."}`      |
+| `429`  | Rate Limit exceeded    | `{"error":"Too many requests from IP:...","status":429,"timestamp":"..."}`      |
 
 ---
 
