@@ -43,7 +43,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        ex.printStackTrace(); // ADD THIS LINE TEMPORARILY
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                 "error", "Something went wrong",
                 "status", 500,
