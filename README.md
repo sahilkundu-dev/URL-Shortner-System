@@ -16,8 +16,8 @@
 
 <br/>
 
-> Transform long, unwieldy URLs into clean, shareable short links — with real-time click analytics, URL expiry, rate limiting, and production-grade input validation.
-> Built with the **Cache-Aside pattern**, **Base62 encoding**, **click tracking**, **URL validation**, **per-link TTL expiry**, **token bucket rate limiting**, and a fully layered Spring Boot architecture.
+> Transform long, unwieldy URLs into clean, shareable short links — with real-time click analytics, URL expiry, rate limiting, and interactive API documentation.
+> Built with the **Cache-Aside pattern**, **Base62 encoding**, **click tracking**, **URL validation**, **per-link TTL expiry**, **token bucket rate limiting**, **Swagger/OpenAPI docs**, and a fully layered Spring Boot architecture.
 
 <br/>
 
@@ -29,7 +29,7 @@ https://www.example.com/blog/how-to-build-a-scalable-url-shortener-using-java-sp
 
 <br/>
 
-**16 unit tests · 2 DB tables · 7 REST endpoints · RFC 3986 URL validation · Real-time click analytics · Per-link TTL expiry · Token bucket rate limiting**
+**16 unit tests · 2 DB tables · 7 REST endpoints · RFC 3986 URL validation · Real-time click analytics · Per-link TTL expiry · Token bucket rate limiting · Swagger/OpenAPI UI**
 
 </div>
 
@@ -48,6 +48,7 @@ https://www.example.com/blog/how-to-build-a-scalable-url-shortener-using-java-sp
 - [Input Validation](#-input-validation)
 - [URL Expiry](#-url-expiry)
 - [Rate Limiting](#-rate-limiting)
+- [Swagger / OpenAPI](#-swagger--openapi)
 - [Running Tests](#-running-tests)
 - [Key Design Decisions](#-key-design-decisions)
 - [Engineering Concepts Covered](#-engineering-concepts-covered)
@@ -98,8 +99,9 @@ The system currently handles **8 REST endpoints** across 3 functional areas:
 | 8  | **URL Expiry**            | Optional per-link TTL in hours, HTTP 410 Gone on expiry, `@Scheduled` nightly cleanup                                 | ✅ Done |
 | 9  | **Global Error Handling** | `@RestControllerAdvice` — clean JSON for 400, 404, 410, 500                                                           | ✅ Done |
 | 10 | **Rate Limiting**         | Token bucket per IP — 10 req/min on POST /api/shorten, HTTP 429 + `Retry-After: 60`, `ConcurrentHashMap` bucket store | ✅ Done |
-| 11 | **16 Unit Tests**         | JUnit 5 + Mockito — all business logic paths covered + rate limit scenarios, no infra needed                          | ✅ Done |
-| 11 | **Docker Compose**        | MySQL 8 + Redis 7 via containers, zero manual installation                                                            | ✅ Done |
+| 11 | **Wagger / OpenAPI Docs** | springdoc-openapi 2.8.5, `@Operation`/`@ApiResponse`/`@Schema` annotation, interactive try-it-out UI                  | ✅ Done |
+| 12 | **16 Unit Tests**         | JUnit 5 + Mockito — all business logic paths covered + rate limit scenarios, no infra needed                          | ✅ Done |
+| 13 | **Docker Compose**        | MySQL 8 + Redis 7 via containers, zero manual installation                                                            | ✅ Done |
 
 ---
 
@@ -341,16 +343,17 @@ MySQL expiresAt is still the authoritative check on every redirect.
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Version | Why This Choice |
-|---|---|---|---|
-| **Language** | Java | 21 LTS | Latest LTS — virtual threads, pattern matching, records |
-| **Framework** | Spring Boot | 3.5.14 | Auto-configuration, embedded Tomcat, DI container, `@Scheduled` support |
-| **Database** | MySQL | 8.0 | ACID-compliant — persistent URL mappings, click events, expiry timestamps |
-| **Cache** | Redis | 7.0 | In-memory key-value — sub-millisecond lookups, native TTL support |
-| **ORM** | Spring Data JPA + Hibernate | Boot-managed | Zero-boilerplate SQL, derived queries, DDL auto-evolution |
-| **Testing** | JUnit 5 + Mockito | Boot-managed | Industry standard — mock injection, no infra needed for unit tests |
-| **Build** | Maven | 3.9 | Dependency management, reproducible builds |
-| **Containers** | Docker + Docker Compose | Latest | Run MySQL + Redis locally — mirrors production environment |
+| Layer          | Technology                  | Version      | Why This Choice                                                           |
+|----------------|-----------------------------|--------------|---------------------------------------------------------------------------|
+| **Language**   | Java                        | 21 LTS       | Latest LTS — virtual threads, pattern matching, records                   |
+| **Framework**  | Spring Boot                 | 3.5.14       | Auto-configuration, embedded Tomcat, DI container, `@Scheduled` support   |
+| **Database**   | MySQL                       | 8.0          | ACID-compliant — persistent URL mappings, click events, expiry timestamps |
+| **Cache**      | Redis                       | 7.0          | In-memory key-value — sub-millisecond lookups, native TTL support         |
+| **ORM**        | Spring Data JPA + Hibernate | Boot-managed | Zero-boilerplate SQL, derived queries, DDL auto-evolution                 |
+| **Testing**    | JUnit 5 + Mockito           | Boot-managed | Industry standard — mock injection, no infra needed for unit tests        |
+| **API Docs**   | springdoc-openapi           | 2.8.5        | Auto-generates OpenAPI 3.1 spec from annotations, serves Swagger UI       |
+| **Build**      | Maven                       | 3.9          | Dependency management, reproducible builds                                |
+| **Containers** | Docker + Docker Compose     | Latest       | Run MySQL + Redis locally — mirrors production environment                |
 
 ---
 
@@ -362,8 +365,10 @@ url-shortener/
 │   ├── main/
 │   │   ├── java/com/sahil/url_shortener/
 │   │   │   ├── config/
-│   │   │   │   └── RedisConfig.java              # RedisTemplate<String,String> bean
-│   │   │   │                                     # StringRedisSerializer — human-readable keys
+│   │   │   │   ├── RedisConfig.java              # RedisTemplate<String,String> bean
+│   │   │   │   │                                 # StringRedisSerializer — human-readable keys
+│   │   │   │   └── OpenApiConfig.java            # OpenAPI metadata — title, description, version, contact, server UI
+│   │   │   │                                     
 │   │   │   ├── controller/
 │   │   │   │   ├── UrlController.java             # POST /api/shorten (accepts ttlHours)
 │   │   │   │   │                                  # GET  /{shortCode} → redirect or 410
@@ -415,7 +420,7 @@ url-shortener/
 │           ├── UrlServiceImplTest.java             # 13 unit tests — JUnit 5 + Mockito
 │           └── RateLimiterServiceTest.java         # 3 unit tests — token bucket
 ├── docker-compose.yml                              # MySQL 8.0 + Redis 7.0 containers
-├── pom.xml                                         # Java 21 · Spring Boot 3.5.14
+├── pom.xml                                         # Java 21 · Spring Boot 3.5.14 · springdoc-openapi 2.8.5
 └── README.md
 ```
 
@@ -468,7 +473,12 @@ Tomcat started on port 8080 (http)
 Started UrlShortenerApplication in X.XXX seconds
 ```
 
-**5. Stop everything when done**
+**5. Swagger UI available at**
+- http://localhost:8080/swagger-ui/swagger-ui/index.html
+- springdoc.swagger-ui.path=/swagger-ui.html
+- springdoc.api-docs.path=/v3/api-docs
+
+**6. Stop everything when done**
 ```bash
 # Stop the Spring Boot app — Ctrl+C in terminal, or red ■ stop button in IntelliJ
 
@@ -754,6 +764,43 @@ done
 # Request 1-10:  200
 # Request 11:    429
 ```
+## 📖 Swagger / OpenAPI
+
+Interactive API documentation is available at:
+http://localhost:8080/swagger-ui/swagger-ui/index.html
+The raw OpenAPI 3.1 JSON spec is available at:
+http://localhost:8080/v3/api-docs
+
+### What You Get
+
+- Every endpoint documented with description, parameters, request body, and all possible responses
+- Real example request/response bodies shown inline
+- **Try it out** button on every endpoint — make real API calls directly from the browser
+- Schema section showing `ShortenRequest` and `ShortenResponse` with field-level descriptions
+- Rate limiting noted explicitly in the API description
+
+### Endpoint Groups
+
+| Group | Endpoints |
+|---|---|
+| **URL Shortener** | `POST /api/shorten` · `GET /{shortCode}` |
+| **Analytics** | `GET /api/analytics/{shortCode}` · `GET /api/analytics/{shortCode}/count` |
+| **Schemas** | `ShortenRequest` · `ShortenResponse` |
+
+### Annotations Used
+
+| Annotation | Purpose |
+|---|---|
+| `@Tag` | Groups endpoints into named sections in the UI |
+| `@Operation` | Summary + multi-line description per endpoint |
+| `@ApiResponse` | Documents each HTTP status code with example body |
+| `@Parameter` | Describes path variables with type and example value |
+| `@Schema` | Documents DTO fields with descriptions and examples |
+| `@ExampleObject` | Provides realistic JSON examples in the UI |
+
+### Why Swagger Matters for Production
+
+Without documentation, every new engineer, QA tester, or integration partner must read source code to understand your API. Swagger generates living documentation that stays in sync with your code — if you add a field, it appears in the docs automatically. No manual doc maintenance, no drift between docs and reality.
 
 ## 🧪 Running Tests
 
@@ -827,36 +874,42 @@ Fixed window counter resets at a boundary — a user can send 10 requests at 00:
 ### 12. Rate Limit POST Only — Not GET
 The redirect endpoint is the product — users clicking links must never be throttled. The shorten endpoint is the expensive write operation that creates DB rows and cache entries. Applying the same rate limit to both would harm legitimate users while barely inconveniencing an attacker who just needs one short code to abuse.
 
+### 13. Swagger Annotations on Controllers, Not Separate Spec Files
+API documentation lives as annotations directly on `@RestController` methods — `@Operation`, `@ApiResponse`, `@Schema`. This means: (a) docs are in the same file as the code they describe, (b) when a developer changes an endpoint they see the docs immediately, (c) springdoc generates the spec at runtime so it always matches the running code. Hand-written YAML spec files drift from code; annotation-driven docs cannot.
+
 ---
 
 ## 📐 Engineering Concepts Covered
 
-| Concept                                  | Where in Code                              | Interview Context                         |
-|------------------------------------------|--------------------------------------------|-------------------------------------------|
-| **Cache-Aside pattern**                  | `UrlServiceImpl`                           | System design: caching strategies         |
-| **Redis TTL alignment**                  | `shortenUrl()` — TTL computed + set        | System design: cache expiry               |
-| **Base62 encoding**                      | `Base62Util`                               | System design: URL shortener deep-dive    |
-| **HTTP 301 vs 302 vs 410**               | `UrlController` + `GlobalExceptionHandler` | HTTP semantics                            |
-| **Per-entity expiry**                    | `expiresAt` field + expiry check           | DB modeling: time-based data              |
-| **@Scheduled cron jobs**                 | `UrlCleanupScheduler`                      | Background jobs, Spring scheduler         |
-| **FK-ordered deletion**                  | Cleanup: clicks → URLs                     | DB: referential integrity                 |
-| **@Transactional on scheduler**          | `cleanupExpiredUrls()`                     | ACID: all-or-nothing cleanup              |
-| **RFC 3986 URI parsing**                 | `UrlValidatorUtil`                         | Security: input validation                |
-| **XSS scheme injection**                 | Blocklist in `UrlValidatorUtil`            | Security: attack surface                  |
-| **Foreign keys + referential integrity** | `url_clicks.url_id → url_mappings.id`      | DB design                                 |
-| **N+1 query prevention**                 | `FetchType.LAZY` on `@ManyToOne`           | ORM performance                           |
-| **Derived query methods**                | `findTop10ByUrlEntityOrderByClickedAtDesc` | Spring Data JPA                           |
-| **Dependency Inversion**                 | `UrlService` interface                     | SOLID principles                          |
-| **Constructor injection**                | `@RequiredArgsConstructor`                 | Spring best practices                     |
-| **@RestControllerAdvice**                | `GlobalExceptionHandler`                   | API: consistent error contracts           |
-| **Mockito strict mode**                  | `UnnecessaryStubbingException` fix         | Testing best practices                    |
-| **ReflectionTestUtils**                  | Injecting `@Value` fields in tests         | Testability                               |
-| **Docker Compose networking**            | `docker-compose.yml`                       | DevOps: containerized infra               |
-| **Token bucket algorithm**               | `RateLimiterService` — Bucket4j            | System design: rate limiting strategies   |
-| **ConcurrentHashMap thread safety**      | `buckets.computeIfAbsent()`                | Concurrency: atomic map operations        |
-| **X-Forwarded-For header**               | `getClientIp()` in `UrlController`         | Networking: reverse proxy awareness       |
-| **HTTP 429 + Retry-After**               | `GlobalExceptionHandler`                   | API design: rate limit response standards |
-| **Hibernate DDL evolution**              | `ddl-auto=update` + new columns            | JPA: schema management                    |
+| Concept                                  | Where in Code                                 | Interview Context                             |
+|------------------------------------------|-----------------------------------------------|-----------------------------------------------|
+| **Cache-Aside pattern**                  | `UrlServiceImpl`                              | System design: caching strategies             |
+| **Redis TTL alignment**                  | `shortenUrl()` — TTL computed + set           | System design: cache expiry                   |
+| **Base62 encoding**                      | `Base62Util`                                  | System design: URL shortener deep-dive        |
+| **HTTP 301 vs 302 vs 410**               | `UrlController` + `GlobalExceptionHandler`    | HTTP semantics                                |
+| **Per-entity expiry**                    | `expiresAt` field + expiry check              | DB modeling: time-based data                  |
+| **@Scheduled cron jobs**                 | `UrlCleanupScheduler`                         | Background jobs, Spring scheduler             |
+| **FK-ordered deletion**                  | Cleanup: clicks → URLs                        | DB: referential integrity                     |
+| **@Transactional on scheduler**          | `cleanupExpiredUrls()`                        | ACID: all-or-nothing cleanup                  |
+| **RFC 3986 URI parsing**                 | `UrlValidatorUtil`                            | Security: input validation                    |
+| **XSS scheme injection**                 | Blocklist in `UrlValidatorUtil`               | Security: attack surface                      |
+| **Foreign keys + referential integrity** | `url_clicks.url_id → url_mappings.id`         | DB design                                     |
+| **N+1 query prevention**                 | `FetchType.LAZY` on `@ManyToOne`              | ORM performance                               |
+| **Derived query methods**                | `findTop10ByUrlEntityOrderByClickedAtDesc`    | Spring Data JPA                               |
+| **Dependency Inversion**                 | `UrlService` interface                        | SOLID principles                              |
+| **Constructor injection**                | `@RequiredArgsConstructor`                    | Spring best practices                         |
+| **@RestControllerAdvice**                | `GlobalExceptionHandler`                      | API: consistent error contracts               |
+| **Mockito strict mode**                  | `UnnecessaryStubbingException` fix            | Testing best practices                        |
+| **ReflectionTestUtils**                  | Injecting `@Value` fields in tests            | Testability                                   |
+| **Docker Compose networking**            | `docker-compose.yml`                          | DevOps: containerized infra                   |
+| **Token bucket algorithm**               | `RateLimiterService` — Bucket4j               | System design: rate limiting strategies       |
+| **ConcurrentHashMap thread safety**      | `buckets.computeIfAbsent()`                   | Concurrency: atomic map operations            |
+| **X-Forwarded-For header**               | `getClientIp()` in `UrlController`            | Networking: reverse proxy awareness           |
+| **HTTP 429 + Retry-After**               | `GlobalExceptionHandler`                      | API design: rate limit response standards     |
+| **OpenAPI 3.1 spec generation**          | `OpenApiConfig` + controller annotations      | API design: documentation standards           |
+| **springdoc-openapi runtime scanning**   | Auto-scans `@RestCOntroller` on startup       | Spring internals: annotation processing       |
+| **Version compatibility debugging**      | `NoSuchMethodError` in `ControllerAdviceBean` | Dependency management: compatibility matrices |
+| **Hibernate DDL evolution**              | `ddl-auto=update` + new columns               | JPA: schema management                        |
 
 ---
 
@@ -902,6 +955,13 @@ The redirect endpoint is the product — users clicking links must never be thro
 - `Retry-After` header: standard HTTP response header telling clients when to retry
 - Why POST endpoints need rate limiting but GET redirect endpoints must not be throttled
 
+**API Documentation**
+- springdoc-openapi generates OpenAPI 3.1 spec at runtime by scanning Spring annotations — zero manual YAML
+- `@Tag` groups endpoints, `@Operation` describes them, `@ApiResponse` documents every status code
+- `@Schema` on DTOs documents fields with descriptions and examples — visible in the Schemas section of Swagger UI
+- Version compatibility is critical: springdoc 2.8.5 is required for Spring Boot 3.5.x — older versions cause `NoSuchMethodError` in `ControllerAdviceBean`
+- The difference between `/swagger-ui.html` (redirect) and `/swagger-ui/swagger-ui/index.html` (actual UI path) in springdoc 2.8.x
+
 ---
 
 ## 🗺️ Roadmap
@@ -919,10 +979,10 @@ The redirect endpoint is the product — users clicking links must never be thro
 - [x] 13 JUnit 5 + Mockito unit tests
 - [x] Docker Compose infrastructure
 - [x] **Rate limiting** — per-IP throttling on POST /api/shorten, Bucket4j + Redis counter, HTTP 429
+- [x] **Swagger / OpenAPI** — `springdoc-openapi`, interactive `/swagger-ui.html`
 
 ### Planned
 - [ ] **Custom alias** — optional user-defined short codes, conflict detection, reserved word blocklist
-- [ ] **Swagger / OpenAPI** — `springdoc-openapi`, interactive `/swagger-ui.html`
 - [ ] **Actuator health endpoints** — `/actuator/health`, custom Redis + MySQL checks
 - [ ] **Async click tracking** — decouple redirect from analytics write with `@Async`
 - [ ] **User authentication** — Spring Security + JWT, register/login, per-user URL ownership
