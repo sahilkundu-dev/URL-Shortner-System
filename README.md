@@ -12,11 +12,13 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![JUnit5](https://img.shields.io/badge/JUnit-5-25A162?style=for-the-badge&logo=junit5&logoColor=white)](https://junit.org/junit5/)
 [![Mockito](https://img.shields.io/badge/Mockito-5-C5D9C8?style=for-the-badge)](https://site.mockito.org/)
+[![Deployed on Railway](https://img.shields.io/badge/Deployed-Railway-8B5CF6?style=for-the-badge&logo=railway&logoColor=white)](https://url-shortner-system-production.up.railway.app)
+[![Swagger UI](https://img.shields.io/badge/API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://url-shortner-system-production.up.railway.app/swagger-ui/swagger-ui/index.html)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 <br/>
 
-> Transform long, unwieldy URLs into clean, shareable short links — with real-time click analytics, URL expiry, rate limiting, and interactive API documentation.
+> Transform long, unwieldy URLs into clean, shareable short links — live in production with real-time click analytics, URL expiry, rate limiting, and interactive API documentation.
 > Built with the **Cache-Aside pattern**, **Base62 encoding**, **click tracking**, **URL validation**, **per-link TTL expiry**, **token bucket rate limiting**, **Swagger/OpenAPI docs**, and a fully layered Spring Boot architecture.
 
 <br/>
@@ -29,14 +31,32 @@ https://www.example.com/blog/how-to-build-a-scalable-url-shortener-using-java-sp
 
 <br/>
 
-**16 unit tests · 2 DB tables · 7 REST endpoints · RFC 3986 URL validation · Real-time click analytics · Per-link TTL expiry · Token bucket rate limiting · Swagger/OpenAPI UI**
+**16 unit tests · 2 DB tables · 7 REST endpoints · Live on Railway · RFC 3986 URL validation · Real-time click analytics · Per-link TTL expiry · Token bucket rate limiting · Swagger/OpenAPI UI**
 
 </div>
+
+--- 
+
+## 🌍 Live Demo
+
+| Link | Description |
+|---|---|
+| [**https://url-shortner-system-production.up.railway.app/api/shorten**](https://url-shortner-system-production.up.railway.app/api/shorten) | POST — shorten a URL |
+| [**Swagger UI**](https://url-shortner-system-production.up.railway.app/swagger-ui/swagger-ui/index.html) | Interactive API explorer — try all endpoints in browser |
+| [**OpenAPI JSON**](https://url-shortner-system-production.up.railway.app/v3/api-docs) | Raw OpenAPI 3.1 specification |
+
+**Quick test — paste this in your terminal:**
+```bash
+curl -X POST https://url-shortner-system-production.up.railway.app/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"longUrl": "https://github.com/sahilkundu-dev"}'
+```
 
 ---
 
 ## 📋 Table of Contents
 
+- [Live Demo](#-live-demo)
 - [Overview](#-overview)
 - [Features Built](#-features-built)
 - [How It Works](#️-how-it-works)
@@ -87,21 +107,22 @@ The system currently handles **8 REST endpoints** across 3 functional areas:
 
 ## ✅ Features Built
 
-| #  | Feature                   | Description                                                                                                           | Status |
-|----|---------------------------|-----------------------------------------------------------------------------------------------------------------------|---|
-| 1  | **URL Shortening**        | Base62 encoding of MySQL auto-increment ID, 6-char padded output                                                      | ✅ Done |
-| 2  | **HTTP Redirect**         | 302 redirect with `Location` header to original URL                                                                   | ✅ Done |
-| 3  | **Redis Caching**         | Cache-Aside pattern, TTL-aligned to URL expiry, graceful MySQL fallback                                               | ✅ Done |
-| 4  | **Duplicate Detection**   | Same long URL always returns same short code — zero duplicate rows                                                    | ✅ Done |
-| 5  | **Click Analytics**       | Per-redirect tracking — timestamp, IP address, user-agent                                                             | ✅ Done |
-| 6  | **Analytics Endpoints**   | Total count + recent 10 clicks per short code                                                                         | ✅ Done |
-| 7  | **URL Validation**        | RFC 3986 URI parsing, scheme allowlist/blocklist, XSS prevention                                                      | ✅ Done |
-| 8  | **URL Expiry**            | Optional per-link TTL in hours, HTTP 410 Gone on expiry, `@Scheduled` nightly cleanup                                 | ✅ Done |
-| 9  | **Global Error Handling** | `@RestControllerAdvice` — clean JSON for 400, 404, 410, 500                                                           | ✅ Done |
-| 10 | **Rate Limiting**         | Token bucket per IP — 10 req/min on POST /api/shorten, HTTP 429 + `Retry-After: 60`, `ConcurrentHashMap` bucket store | ✅ Done |
-| 11 | **Wagger / OpenAPI Docs** | springdoc-openapi 2.8.5, `@Operation`/`@ApiResponse`/`@Schema` annotation, interactive try-it-out UI                  | ✅ Done |
-| 12 | **16 Unit Tests**         | JUnit 5 + Mockito — all business logic paths covered + rate limit scenarios, no infra needed                          | ✅ Done |
-| 13 | **Docker Compose**        | MySQL 8 + Redis 7 via containers, zero manual installation                                                            | ✅ Done |
+| #  | Feature                    | Description                                                                                                           | Status |
+|----|----------------------------|-----------------------------------------------------------------------------------------------------------------------|---|
+| 1  | **URL Shortening**         | Base62 encoding of MySQL auto-increment ID, 6-char padded output                                                      | ✅ Done |
+| 2  | **HTTP Redirect**          | 302 redirect with `Location` header to original URL                                                                   | ✅ Done |
+| 3  | **Redis Caching**          | Cache-Aside pattern, TTL-aligned to URL expiry, graceful MySQL fallback                                               | ✅ Done |
+| 4  | **Duplicate Detection**    | Same long URL always returns same short code — zero duplicate rows                                                    | ✅ Done |
+| 5  | **Click Analytics**        | Per-redirect tracking — timestamp, IP address, user-agent                                                             | ✅ Done |
+| 6  | **Analytics Endpoints**    | Total count + recent 10 clicks per short code                                                                         | ✅ Done |
+| 7  | **URL Validation**         | RFC 3986 URI parsing, scheme allowlist/blocklist, XSS prevention                                                      | ✅ Done |
+| 8  | **URL Expiry**             | Optional per-link TTL in hours, HTTP 410 Gone on expiry, `@Scheduled` nightly cleanup                                 | ✅ Done |
+| 9  | **Global Error Handling**  | `@RestControllerAdvice` — clean JSON for 400, 404, 410, 500                                                           | ✅ Done |
+| 10 | **Rate Limiting**          | Token bucket per IP — 10 req/min on POST /api/shorten, HTTP 429 + `Retry-After: 60`, `ConcurrentHashMap` bucket store | ✅ Done |
+| 11 | **Swagger / OpenAPI Docs** | springdoc-openapi 2.8.5, `@Operation`/`@ApiResponse`/`@Schema` annotation, interactive try-it-out UI                  | ✅ Done |
+| 12 | **Live Deployment**        | Deployed to Railway with managed MySQL 8 + Redis 7, HTTPS, automatic deploys on `git push`                            | ✅ Done |
+| 13 | **16 Unit Tests**          | JUnit 5 + Mockito — all business logic paths covered + rate limit scenarios, no infra needed                          | ✅ Done |
+| 14 | **Docker Compose**         | MySQL 8 + Redis 7 via containers, zero manual installation                                                            | ✅ Done |
 
 ---
 
@@ -343,17 +364,18 @@ MySQL expiresAt is still the authoritative check on every redirect.
 
 ## 🛠️ Tech Stack
 
-| Layer          | Technology                  | Version      | Why This Choice                                                           |
-|----------------|-----------------------------|--------------|---------------------------------------------------------------------------|
-| **Language**   | Java                        | 21 LTS       | Latest LTS — virtual threads, pattern matching, records                   |
-| **Framework**  | Spring Boot                 | 3.5.14       | Auto-configuration, embedded Tomcat, DI container, `@Scheduled` support   |
-| **Database**   | MySQL                       | 8.0          | ACID-compliant — persistent URL mappings, click events, expiry timestamps |
-| **Cache**      | Redis                       | 7.0          | In-memory key-value — sub-millisecond lookups, native TTL support         |
-| **ORM**        | Spring Data JPA + Hibernate | Boot-managed | Zero-boilerplate SQL, derived queries, DDL auto-evolution                 |
-| **Testing**    | JUnit 5 + Mockito           | Boot-managed | Industry standard — mock injection, no infra needed for unit tests        |
-| **API Docs**   | springdoc-openapi           | 2.8.5        | Auto-generates OpenAPI 3.1 spec from annotations, serves Swagger UI       |
-| **Build**      | Maven                       | 3.9          | Dependency management, reproducible builds                                |
-| **Containers** | Docker + Docker Compose     | Latest       | Run MySQL + Redis locally — mirrors production environment                |
+| Layer          | Technology                  | Version      | Why This Choice                                                                                                  |
+|----------------|-----------------------------|--------------|------------------------------------------------------------------------------------------------------------------|
+| **Language**   | Java                        | 21 LTS       | Latest LTS — virtual threads, pattern matching, records                                                          |
+| **Framework**  | Spring Boot                 | 3.5.14       | Auto-configuration, embedded Tomcat, DI container, `@Scheduled` support                                          |
+| **Database**   | MySQL                       | 8.0          | ACID-compliant — persistent URL mappings, click events, expiry timestamps                                        |
+| **Cache**      | Redis                       | 7.0          | In-memory key-value — sub-millisecond lookups, native TTL support                                                |
+| **ORM**        | Spring Data JPA + Hibernate | Boot-managed | Zero-boilerplate SQL, derived queries, DDL auto-evolution                                                        |
+| **Testing**    | JUnit 5 + Mockito           | Boot-managed | Industry standard — mock injection, no infra needed for unit tests                                               |
+| **API Docs**   | springdoc-openapi           | 2.8.5        | Auto-generates OpenAPI 3.1 spec from annotations, serves Swagger UI                                              |
+| **Deployment** | Railway                     | Latest       | PaaS — managed MySQL + Redis, HTTPS, automatic deploys from GitHub                                               |
+| **Build**      | Maven                       | 3.9          | Dependency management, reproducible builds                                                                       |
+| **Containers** | Docker + Docker Compose     | Latest       | Run MySQL + Redis locally — mirrors production environment, Multi-stage build, non-root user, ~200MB final image |
 
 ---
 
@@ -420,6 +442,8 @@ url-shortener/
 │           ├── UrlServiceImplTest.java             # 13 unit tests — JUnit 5 + Mockito
 │           └── RateLimiterServiceTest.java         # 3 unit tests — token bucket
 ├── docker-compose.yml                              # MySQL 8.0 + Redis 7.0 containers
+├── Dockerfile                                      # Multi-stage build (Maven + JRE Alpine)
+├── JAVA_OPTS support                               # Non-root user (appuser)
 ├── pom.xml                                         # Java 21 · Spring Boot 3.5.14 · springdoc-openapi 2.8.5
 └── README.md
 ```
@@ -478,7 +502,20 @@ Started UrlShortenerApplication in X.XXX seconds
 - springdoc.swagger-ui.path=/swagger-ui.html
 - springdoc.api-docs.path=/v3/api-docs
 
-**6. Stop everything when done**
+**6. Production (Live on Railway)**
+
+The application is deployed and running. No setup required.
+
+**Base URL:** `https://url-shortner-system-production.up.railway.app`
+
+```bash
+# Shorten a URL right now
+curl -X POST https://url-shortner-system-production.up.railway.app/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"longUrl": "https://your-long-url.com"}'
+```
+
+**7. Stop everything when done**
 ```bash
 # Stop the Spring Boot app — Ctrl+C in terminal, or red ■ stop button in IntelliJ
 
@@ -802,6 +839,75 @@ http://localhost:8080/v3/api-docs
 
 Without documentation, every new engineer, QA tester, or integration partner must read source code to understand your API. Swagger generates living documentation that stays in sync with your code — if you add a field, it appears in the docs automatically. No manual doc maintenance, no drift between docs and reality.
 
+## 🚀 Deployment
+
+The application is deployed to **Railway** with managed infrastructure.
+
+### Infrastructure
+Railway Project
+├── App Service          (Spring Boot — this repo, built from Dockerfile)
+├── MySQL Service        (MySQL 8.0 — managed, auto-backups)
+└── Redis Service        (Redis 7.0 — managed, persistent)
+
+### How Automatic Deploys Work
+You push to GitHub main branch
+        ↓
+Railway detects the push
+        ↓
+Pulls latest code
+        ↓
+Runs Dockerfile (multi-stage build)
+Stage 1: Maven compiles → creates .jar
+Stage 2: JRE Alpine runs the .jar
+        ↓
+New container replaces old one (zero downtime)
+        ↓
+Live in ~3-4 minutes
+
+### Dockerfile — Multi-Stage Build
+
+```dockerfile
+# Stage 1: Build — Maven + JDK 21 compiles the project
+FROM maven:3.9.6-eclipse-temurin-21 AS builder
+# Downloads dependencies first (cached layer — fast rebuilds)
+# Compiles with -DskipTests (tests run locally, not in Docker build)
+
+# Stage 2: Run — Lightweight JRE Alpine only
+FROM eclipse-temurin:21-jre-alpine
+# Non-root user (appuser) for security
+# Final image: ~200MB vs ~600MB for full JDK image
+# JAVA_OPTS env var for Railway to configure heap size
+```
+
+### Environment Variables
+
+All secrets are managed by Railway — never hardcoded in code.
+
+| Variable | Source | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `${{MySQL.MYSQLHOST}}` reference | JDBC connection string |
+| `DATABASE_USERNAME` | `${{MySQL.MYSQLUSER}}` reference | MySQL username |
+| `DATABASE_PASSWORD` | `${{MySQL.MYSQLPASSWORD}}` reference | MySQL password |
+| `REDIS_HOST` | `${{Redis.REDISHOST}}` reference | Redis hostname |
+| `REDIS_PORT` | `${{Redis.REDISPORT}}` reference | Redis port |
+| `REDIS_PASSWORD` | `${{Redis.REDISPASSWORD}}` reference | Redis auth |
+| `APP_BASE_URL` | Manual | Short URL domain prefix |
+| `JAVA_OPTS` | Manual | JVM heap: `-Xmx400m -Xms200m` |
+
+### Production vs Local Config
+
+```properties
+# application.properties uses ${VAR:default} pattern
+# Production: Railway injects real values
+# Local: Falls back to Docker Compose values
+
+spring.datasource.password=${DATABASE_PASSWORD:root}
+#                                              ↑ local fallback
+#                            ↑ production value from Railway
+```
+
+This means the same codebase runs identically in both environments — zero config changes needed when switching between local and production.
+
 ## 🧪 Running Tests
 
 ```bash
@@ -877,6 +983,15 @@ The redirect endpoint is the product — users clicking links must never be thro
 ### 13. Swagger Annotations on Controllers, Not Separate Spec Files
 API documentation lives as annotations directly on `@RestController` methods — `@Operation`, `@ApiResponse`, `@Schema`. This means: (a) docs are in the same file as the code they describe, (b) when a developer changes an endpoint they see the docs immediately, (c) springdoc generates the spec at runtime so it always matches the running code. Hand-written YAML spec files drift from code; annotation-driven docs cannot.
 
+### 14. Multi-Stage Docker Build
+Stage 1 uses `maven:3.9.6-eclipse-temurin-21` — a full Maven + JDK image — to compile the project and produce the `.jar`. Stage 2 uses `eclipse-temurin:21-jre-alpine` — a minimal JRE without Maven, JDK tools, or source code. The final production image is ~200MB instead of ~600MB. Smaller images pull faster, start faster, and have a smaller attack surface.
+
+### 15. `${VAR:default}` Config Pattern
+Every secret in `application.properties` uses Spring's `${VARIABLE_NAME:fallback}` syntax. In production, Railway injects real values. Locally, the fallback values match Docker Compose credentials. The same `application.properties` file works in both environments — no environment-specific config files, no accidental secret commits.
+
+### 16. Non-Root Container User
+The Dockerfile creates a dedicated `appuser` and runs the JVM as that user. If the application has a vulnerability that allows code execution, an attacker running as `appuser` has far fewer system capabilities than one running as `root`. This is a standard security hardening practice that costs nothing to implement.
+
 ---
 
 ## 📐 Engineering Concepts Covered
@@ -910,6 +1025,11 @@ API documentation lives as annotations directly on `@RestController` methods —
 | **springdoc-openapi runtime scanning**   | Auto-scans `@RestCOntroller` on startup       | Spring internals: annotation processing       |
 | **Version compatibility debugging**      | `NoSuchMethodError` in `ControllerAdviceBean` | Dependency management: compatibility matrices |
 | **Hibernate DDL evolution**              | `ddl-auto=update` + new columns               | JPA: schema management                        |
+| **Multi-stage Docker build**             | `Dockerfile` — builder + runtime stages       | DevOps: container optimization                |
+| **Non-root container security**          | `adduser appuser` in Dockerfile               | Security: container hardening                 |
+| **12-factor app config**                 | `${VAR:default}` in `application.properties`  | DevOps: environment-agnostic config           |
+| **Railway variable references**          | `${{MySQL.MYSQLHOST}}` syntax                 | DevOps: secrets management                    |
+| **PaaS deployment**                      | Railway managed MySQL + Redis                 | DevOps: cloud deployment                      |
 
 ---
 
@@ -962,6 +1082,16 @@ API documentation lives as annotations directly on `@RestController` methods —
 - Version compatibility is critical: springdoc 2.8.5 is required for Spring Boot 3.5.x — older versions cause `NoSuchMethodError` in `ControllerAdviceBean`
 - The difference between `/swagger-ui.html` (redirect) and `/swagger-ui/swagger-ui/index.html` (actual UI path) in springdoc 2.8.x
 
+**Deployment & DevOps**
+- Multi-stage Docker builds: why Stage 1 (build) and Stage 2 (run) use different base images
+- `eclipse-temurin:21-jre-alpine` vs full JDK: 200MB vs 600MB — JRE is all you need to run a jar
+- Layer caching: copying `pom.xml` and downloading dependencies before source code makes rebuilds 3-5x faster
+- Non-root Docker users: `adduser appuser` is a one-line security hardening step with zero cost
+- 12-factor app config: `${VAR:default}` pattern makes the same codebase work locally and in production
+- Railway variable references: `${{MySQL.MYSQLHOST}}` pulls values across services — no hardcoded credentials ever
+- `JAVA_OPTS=-Xmx400m`: why heap limits matter on PaaS free tiers with limited RAM
+- `useSSL=true&serverTimezone=UTC` in production JDBC URL vs `useSSL=false` locally — production requires SSL
+
 ---
 
 ## 🗺️ Roadmap
@@ -980,13 +1110,14 @@ API documentation lives as annotations directly on `@RestController` methods —
 - [x] Docker Compose infrastructure
 - [x] **Rate limiting** — per-IP throttling on POST /api/shorten, Bucket4j + Redis counter, HTTP 429
 - [x] **Swagger / OpenAPI** — `springdoc-openapi`, interactive `/swagger-ui.html`
+- [x] **Deploy to Railway/Render** — `Dockerfile`, managed MySQL + Redis, real short domain
+- [x] **Dockerfile** — multi-stage build, non-root user, production ready
 
 ### Planned
 - [ ] **Custom alias** — optional user-defined short codes, conflict detection, reserved word blocklist
 - [ ] **Actuator health endpoints** — `/actuator/health`, custom Redis + MySQL checks
 - [ ] **Async click tracking** — decouple redirect from analytics write with `@Async`
 - [ ] **User authentication** — Spring Security + JWT, register/login, per-user URL ownership
-- [ ] **Deploy to Railway/Render** — `Dockerfile`, managed MySQL + Redis, real short domain
 
 ---
 
@@ -996,6 +1127,9 @@ API documentation lives as annotations directly on `@RestController` methods —
 Associate Software Engineer → targeting FAANG / Product-Based Companies
 
 Building in public as part of an 18-month structured FAANG preparation journey — mastering DSA, system design, and production-grade backend engineering.
+
+🔗 **Live Project:** [url-shortner-system-production.up.railway.app](https://url-shortner-system-production.up.railway.app)
+📖 **API Docs:** [Swagger UI](https://url-shortner-system-production.up.railway.app/swagger-ui/swagger-ui/index.html)
 
 [![GitHub](https://img.shields.io/badge/GitHub-sahilkundu--dev-181717?style=flat&logo=github)](https://github.com/sahilkundu-dev)
 
