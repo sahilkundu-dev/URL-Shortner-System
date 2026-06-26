@@ -28,9 +28,14 @@ public class OpenApiConfig {
                                 - Real-time click analytics (IP, user-agent, timestamp)
                                 - RFC 3986 URL validation with XSS scheme blocklist
                                 - Token bucket rate limiting (10 req/min per IP)
+                                - Spring Actuator health monitoring
+                                
+                                **Health & Monitoring:**
+                                - `GET /actuator/health` — System health (MySQL, Redis, app)
+                                - `GET /actuator/info` — App metadata
+                                - `GET /actuator/metrics` — JVM and HTTP metrics
                                 
                                 **Rate Limiting:** POST /api/shorten is limited to 10 requests per minute per IP.
-                                Exceeding this returns HTTP 429 with a Retry-After header.
                                 """)
                         .version("1.0.0")
                         .contact(new Contact()
