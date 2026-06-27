@@ -7,6 +7,7 @@ import com.sahil.url_shortener.exception.UrlNotFoundException;
 import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
 import com.sahil.url_shortener.service.UrlServiceImpl;
+import com.sahil.url_shortener.util.UrlValidatorUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -304,5 +305,35 @@ class UrlServiceImplTest {
         verify(redisTemplate).delete(SHORT_CODE);
         // Click should NOT be recorded for expired URL
         verify(clickRepository, never()).save(any());
+    }
+
+    // ─── TEST 17 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("validateShortCode: null short code throws UrlValidationException")
+    void validateShortCode_null_throwsException() {
+        assertThatThrownBy(() -> UrlValidatorUtil.validateShortCode(null))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("must not be empty");
+    }
+
+// ─── TEST 18 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("validateShortCode: wrong length throws UrlValidationException")
+    void validateShortCode_wrongLength_throwsException() {
+        assertThatThrownBy(() -> UrlValidatorUtil.validateShortCode("abc"))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("exactly 6 characters");
+    }
+
+// ─── TEST 19 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("validateShortCode: special characters throws UrlValidationException")
+    void validateShortCode_specialChars_throwsException() {
+        assertThatThrownBy(() -> UrlValidatorUtil.validateShortCode("ab!@#$"))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("alphanumeric");
     }
 }

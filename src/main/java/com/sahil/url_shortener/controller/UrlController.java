@@ -4,6 +4,7 @@ import com.sahil.url_shortener.dto.ShortenRequest;
 import com.sahil.url_shortener.dto.ShortenResponse;
 import com.sahil.url_shortener.service.RateLimiterService;
 import com.sahil.url_shortener.service.UrlService;
+import com.sahil.url_shortener.util.UrlValidatorUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -115,6 +116,9 @@ public class UrlController {
             @Parameter(description = "The 6-character Base62 short code", example = "000001")
             @PathVariable String shortCode,
             HttpServletRequest request) {
+
+        // Validate format before touching Redis or MySQL
+        UrlValidatorUtil.validateShortCode(shortCode);
 
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");

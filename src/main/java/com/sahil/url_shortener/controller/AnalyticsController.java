@@ -5,6 +5,7 @@ import com.sahil.url_shortener.entity.UrlEntity;
 import com.sahil.url_shortener.exception.UrlNotFoundException;
 import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
+import com.sahil.url_shortener.util.UrlValidatorUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -68,6 +69,9 @@ public class AnalyticsController {
             @Parameter(description = "The 6-character Base62 short code", example = "000001")
             @PathVariable String shortCode) {
 
+        // Validate format first
+        UrlValidatorUtil.validateShortCode(shortCode);
+
         UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));
 
@@ -102,6 +106,9 @@ public class AnalyticsController {
     public ResponseEntity<Long> getClickCount(
             @Parameter(description = "The 6-character Base62 short code", example = "000001")
             @PathVariable String shortCode) {
+
+        // Validate format first
+        UrlValidatorUtil.validateShortCode(shortCode);
 
         UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));

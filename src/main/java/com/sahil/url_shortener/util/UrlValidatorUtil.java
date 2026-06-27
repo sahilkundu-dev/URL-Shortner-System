@@ -70,4 +70,38 @@ public class UrlValidatorUtil {
             );
         }
     }
+
+    private static final int SHORT_CODE_LENGTH = 6;
+    private static final java.util.regex.Pattern SHORT_CODE_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9]{6}$");
+
+    /**
+     * Validates that a shortCode is exactly 6 alphanumeric characters.
+     * Rejects path traversal, XSS, special characters, wrong length.
+     *
+     * Valid:   "000001", "aB3xYz", "AAAAAA"
+     * Invalid: "abc", "abc!@#", "../../x", "toolongcode", "", null
+     */
+    public static void validateShortCode(String shortCode) {
+
+        // Rule 1: Null or blank
+        if (shortCode == null || shortCode.isBlank()) {
+            throw new UrlValidationException("Short code must not be empty");
+        }
+
+        // Rule 2: Exact length — our Base62 codes are always 6 chars
+        if (shortCode.length() != SHORT_CODE_LENGTH) {
+            throw new UrlValidationException(
+                    "Short code must be exactly " + SHORT_CODE_LENGTH +
+                            " characters. Received: " + shortCode.length()
+            );
+        }
+
+        // Rule 3: Only alphanumeric — blocks path traversal, XSS, special chars
+        if (!SHORT_CODE_PATTERN.matcher(shortCode).matches()) {
+            throw new UrlValidationException(
+                    "Short code must contain only alphanumeric characters (a-z, A-Z, 0-9)"
+            );
+        }
+    }
 }
