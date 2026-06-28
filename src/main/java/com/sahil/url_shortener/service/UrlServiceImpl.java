@@ -8,6 +8,7 @@ import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
 import com.sahil.url_shortener.util.Base62Util;
 import com.sahil.url_shortener.util.UrlValidatorUtil;
+import com.sahil.url_shortener.exception.AliasConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -30,23 +31,56 @@ public class UrlServiceImpl implements UrlService {
     private static final long DEFAULT_CACHE_TTL_HOURS = 24;
 
     @Override
-    public String shortenUrl(String longUrl, Integer ttlHours) {
+    public String shortenUrl(String longUrl, Integer ttlHours, String customAlias) {
 
         // Step 1: Validate the URL
         UrlValidatorUtil.validate(longUrl);
 
-        // Step 2: Check if already shortened
+        // Step 2: Handle custom alias path
+        if (customAlias != null && !customAlias.isBlank()) {
+
+            // Validate and normalize the alias
+            String normalizedAlias = UrlValidatorUtil.validateAndNormalizeAlias(customAlias);
+
+            // Check if alias is already taken
+            if (urlRepository.findByShortCode(normalizedAlias).isPresent()) {
+                throw new AliasConflictException(normalizedAlias);
+            }
+
+            // Compute expiry
+            LocalDateTime expiresAt = (ttlHours != null && ttlHours > 0)
+                    ? LocalDateTime.now().plusHours(ttlHours)
+                    : null;
+
+            // Save with the custom alias as shortCode
+            UrlEntity entity = UrlEntity.builder()
+                    .longUrl(longUrl)
+                    .shortCode(normalizedAlias)
+                    .expiresAt(expiresAt)
+                    .build();
+            urlRepository.save(entity);
+
+            // Cache in Redis
+            long cacheTtl = (ttlHours != null && ttlHours > 0)
+                    ? ttlHours
+                    : DEFAULT_CACHE_TTL_HOURS;
+            redisTemplate.opsForValue().set(
+                    normalizedAlias, longUrl, cacheTtl, TimeUnit.HOURS
+            );
+
+            return baseUrl + "/" + normalizedAlias;
+        }
+
+        // Step 3: Base62 path — existing behaviour unchanged
         var existing = urlRepository.findByLongUrl(longUrl);
         if (existing.isPresent()) {
             return baseUrl + "/" + existing.get().getShortCode();
         }
 
-        // Step 3: Compute expiry timestamp if TTL provided
         LocalDateTime expiresAt = (ttlHours != null && ttlHours > 0)
                 ? LocalDateTime.now().plusHours(ttlHours)
                 : null;
 
-        // Step 4: Save to MySQL with temp shortCode
         UrlEntity entity = UrlEntity.builder()
                 .longUrl(longUrl)
                 .shortCode("temp")
@@ -54,22 +88,15 @@ public class UrlServiceImpl implements UrlService {
                 .build();
         entity = urlRepository.save(entity);
 
-        // Step 5: Encode ID to Base62
         String shortCode = Base62Util.encode(entity.getId());
-
-        // Step 6: Update with real shortCode
         entity.setShortCode(shortCode);
         urlRepository.save(entity);
 
-        // Step 7: Cache in Redis
-        // If URL has custom TTL, align Redis TTL to match
-        // If no TTL, use default 24h cache TTL
-        long cacheTtlHours = (ttlHours != null && ttlHours > 0)
+        long cacheTtl = (ttlHours != null && ttlHours > 0)
                 ? ttlHours
                 : DEFAULT_CACHE_TTL_HOURS;
-
         redisTemplate.opsForValue().set(
-                shortCode, longUrl, cacheTtlHours, TimeUnit.HOURS
+                shortCode, longUrl, cacheTtl, TimeUnit.HOURS
         );
 
         return baseUrl + "/" + shortCode;

@@ -41,6 +41,15 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(AliasConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleAliasConflict(AliasConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", ex.getMessage(),
+                "status", 409,
+                "timestamp", LocalDateTime.now().toString()
+        ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(

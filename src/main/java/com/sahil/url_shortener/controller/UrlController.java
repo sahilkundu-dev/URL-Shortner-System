@@ -74,7 +74,8 @@ public class UrlController {
 
         String shortUrl = urlService.shortenUrl(
                 request.getLongUrl(),
-                request.getTtlHours()
+                request.getTtlHours(),
+                request.getCustomAlias()
         );
         return ResponseEntity.ok(
                 new ShortenResponse(shortUrl, request.getLongUrl())
@@ -118,7 +119,8 @@ public class UrlController {
             HttpServletRequest request) {
 
         // Validate format before touching Redis or MySQL
-        UrlValidatorUtil.validateShortCode(shortCode);
+        // Accepts EITHER: 6-char Base62 code OR Custom alias format
+        UrlValidatorUtil.validateShortCodeOrAlias(shortCode);
 
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");

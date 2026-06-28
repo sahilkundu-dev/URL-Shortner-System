@@ -108,7 +108,7 @@ public class AnalyticsController {
             @PathVariable String shortCode) {
 
         // Validate format first
-        UrlValidatorUtil.validateShortCode(shortCode);
+        UrlValidatorUtil.validateShortCodeOrAlias(shortCode);
 
         UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException(shortCode));

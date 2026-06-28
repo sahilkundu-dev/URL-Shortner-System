@@ -8,6 +8,8 @@ import com.sahil.url_shortener.repository.ClickRepository;
 import com.sahil.url_shortener.repository.UrlRepository;
 import com.sahil.url_shortener.service.UrlServiceImpl;
 import com.sahil.url_shortener.util.UrlValidatorUtil;
+import com.sahil.url_shortener.exception.AliasConflictException;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +79,7 @@ class UrlServiceImplTest {
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT
-        String result = urlService.shortenUrl(LONG_URL, null);
+        String result = urlService.shortenUrl(LONG_URL, null, null);
 
         // ASSERT
         assertThat(result).isEqualTo(BASE_URL + "/" + SHORT_CODE);
@@ -100,7 +102,7 @@ class UrlServiceImplTest {
         when(urlRepository.findByLongUrl(LONG_URL)).thenReturn(Optional.of(existingEntity));
 
         // ACT
-        String result = urlService.shortenUrl(LONG_URL, null);
+        String result = urlService.shortenUrl(LONG_URL, null, null);
 
         // ASSERT
         assertThat(result).isEqualTo(BASE_URL + "/" + SHORT_CODE);
@@ -185,7 +187,7 @@ class UrlServiceImplTest {
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT
-        urlService.shortenUrl(LONG_URL, null);
+        urlService.shortenUrl(LONG_URL, null, null);
 
         // ASSERT
         verify(valueOperations).set(any(), any(), eq(24L), eq(TimeUnit.HOURS));
@@ -218,7 +220,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: null URL throws UrlValidationException")
     void shortenUrl_nullUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl(null, null))
+        assertThatThrownBy(() -> urlService.shortenUrl(null, null, null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("empty");
     }
@@ -229,7 +231,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: blank URL throws UrlValidationException")
     void shortenUrl_blankUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("   ", null))
+        assertThatThrownBy(() -> urlService.shortenUrl("   ", null, null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("empty");
     }
@@ -240,7 +242,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: javascript scheme throws UrlValidationException")
     void shortenUrl_javascriptUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("javascript:alert(1)", null))
+        assertThatThrownBy(() -> urlService.shortenUrl("javascript:alert(1)", null, null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("scheme not allowed");
     }
@@ -251,7 +253,7 @@ class UrlServiceImplTest {
     @DisplayName("shortenUrl: malformed URL throws UrlValidationException")
     void shortenUrl_malformedUrl_throwsValidationException() {
 
-        assertThatThrownBy(() -> urlService.shortenUrl("not-a-url", null))
+        assertThatThrownBy(() -> urlService.shortenUrl("not-a-url", null, null))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("Invalid URL format");
     }
@@ -271,7 +273,7 @@ class UrlServiceImplTest {
         when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
 
         // ACT — shorten with 6-hour TTL
-        urlService.shortenUrl(LONG_URL, 6);
+        urlService.shortenUrl(LONG_URL, 6, null);
 
         // ASSERT — Redis TTL should be 6 hours, not 24
         verify(valueOperations).set(any(), any(), eq(6L), eq(TimeUnit.HOURS));
@@ -335,5 +337,98 @@ class UrlServiceImplTest {
         assertThatThrownBy(() -> UrlValidatorUtil.validateShortCode("ab!@#$"))
                 .isInstanceOf(UrlValidationException.class)
                 .hasMessageContaining("alphanumeric");
+    }
+
+    // ─── TEST 20 (shift existing 20-23 to 22-25) ──────────────────────────────
+
+    @Test
+    @DisplayName("validateShortCodeOrAlias: custom alias length accepted")
+    void validateShortCodeOrAlias_customAlias_passes() {
+        // Should not throw — my-github is 9 chars, valid format
+        assertThatCode(() -> UrlValidatorUtil.validateShortCodeOrAlias("my-github"))
+                .doesNotThrowAnyException();
+    }
+
+// ─── TEST 21 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("validateShortCodeOrAlias: path traversal blocked")
+    void validateShortCodeOrAlias_pathTraversal_throwsException() {
+        assertThatThrownBy(() -> UrlValidatorUtil.validateShortCodeOrAlias("../../etc"))
+                .isInstanceOf(UrlValidationException.class);
+    }
+
+    // ─── TEST 22 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: custom alias is saved as shortCode directly")
+    void shortenUrl_customAlias_savedAsShortCode() {
+
+        // ARRANGE
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(urlRepository.findByShortCode("my-link")).thenReturn(Optional.empty());
+
+        UrlEntity savedEntity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode("my-link").build();
+        when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
+
+        // ACT
+        String result = urlService.shortenUrl(LONG_URL, null, "my-link");
+
+        // ASSERT
+        assertThat(result).isEqualTo(BASE_URL + "/my-link");
+        verify(urlRepository).save(any(UrlEntity.class));
+        verify(valueOperations).set(eq("my-link"), eq(LONG_URL), anyLong(), any());
+    }
+
+// ─── TEST 23 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: custom alias conflict throws AliasConflictException")
+    void shortenUrl_customAliasConflict_throwsException() {
+
+        // ARRANGE
+        UrlEntity existingEntity = UrlEntity.builder()
+                .id(1L).longUrl("https://other.com").shortCode("my-link").build();
+        when(urlRepository.findByShortCode("my-link"))
+                .thenReturn(Optional.of(existingEntity));
+
+        // ACT + ASSERT
+        assertThatThrownBy(() -> urlService.shortenUrl(LONG_URL, null, "my-link"))
+                .isInstanceOf(AliasConflictException.class)
+                .hasMessageContaining("my-link")
+                .hasMessageContaining("already taken");
+    }
+
+// ─── TEST 24 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: reserved alias throws UrlValidationException")
+    void shortenUrl_reservedAlias_throwsValidationException() {
+
+        assertThatThrownBy(() -> urlService.shortenUrl(LONG_URL, null, "api"))
+                .isInstanceOf(UrlValidationException.class)
+                .hasMessageContaining("reserved");
+    }
+
+// ─── TEST 25 ──────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("shortenUrl: alias normalized to lowercase before saving")
+    void shortenUrl_aliasNormalizedToLowercase() {
+
+        // ARRANGE
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(urlRepository.findByShortCode("my-link")).thenReturn(Optional.empty());
+
+        UrlEntity savedEntity = UrlEntity.builder()
+                .id(1L).longUrl(LONG_URL).shortCode("my-link").build();
+        when(urlRepository.save(any(UrlEntity.class))).thenReturn(savedEntity);
+
+        // ACT — pass uppercase alias
+        String result = urlService.shortenUrl(LONG_URL, null, "MY-LINK");
+
+        // ASSERT — result uses lowercase
+        assertThat(result).isEqualTo(BASE_URL + "/my-link");
     }
 }
